@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -9,19 +9,23 @@ import {
     Alert,
     Linking,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { detectionService } from '../services/DetectionService';
 import { BroadcastGroup } from '../types';
 
-type NavigationProp = any;
-type RouteProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+    selectionMode?: boolean;
+    onSelectGroup?: (groupId: string) => void;
+}
 
-export const SetActiveGroupScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
-    const route = useRoute<RouteProp>();
-    const { selectionMode, onSelectGroup } = route.params || {};
-    
+export const SetActiveGroupScreen: React.FC<ScreenProps> = ({ 
+    navigate, 
+    goBack, 
+    selectionMode, 
+    onSelectGroup 
+}) => {
     const [groups, setGroups] = useState<BroadcastGroup[]>([]);
     const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -42,20 +46,13 @@ export const SetActiveGroupScreen: React.FC = () => {
 
     useEffect(() => {
         loadData();
-        
-        // Set header title based on mode
-        navigation.setOptions({
-            title: selectionMode ? 'Select Group' : 'Set Active Group',
-        });
-    }, [navigation, selectionMode]);
+    }, []);
 
     const handleSelectGroup = async (groupId: string, groupName: string) => {
         if (selectionMode && onSelectGroup) {
-            // Selection mode (for assigning lists)
             onSelectGroup(groupId);
-            navigation.goBack();
+            goBack();
         } else {
-            // Normal mode - set as active and open WhatsApp
             await detectionService.setActiveGroup(groupId);
             setActiveGroupId(groupId);
             
@@ -101,7 +98,7 @@ export const SetActiveGroupScreen: React.FC = () => {
                 </Text>
                 <TouchableOpacity 
                     style={styles.createButton}
-                    onPress={() => navigation.navigate('GroupCreation')}
+                    onPress={() => navigate('GroupCreation')}
                 >
                     <Text style={styles.createButtonText}>Create Group</Text>
                 </TouchableOpacity>
@@ -111,6 +108,16 @@ export const SetActiveGroupScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={goBack} style={styles.backButton}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>
+                    {selectionMode ? 'Select Group' : 'Set Active Group'}
+                </Text>
+                <View style={styles.placeholder} />
+            </View>
+
             {!selectionMode && (
                 <View style={styles.infoBanner}>
                     <Text style={styles.infoText}>
@@ -176,6 +183,32 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 40,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 16,
+        backgroundColor: '#ffffff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#2196F3',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#202124',
+    },
+    placeholder: {
+        width: 50,
     },
     infoBanner: {
         backgroundColor: '#e8f0fe',

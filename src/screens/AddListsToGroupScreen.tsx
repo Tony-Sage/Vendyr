@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -8,19 +8,27 @@ import {
     TouchableOpacity,
     ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { BroadcastList } from '../types';
 import { BroadcastListCard } from '../components/BroadcastListCard';
 
-type NavigationProp = any;
-type RouteProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+    mode?: string;
+    groupId?: string;
+    selectedListIds?: string[];
+    onSelect?: (listIds: string[]) => void;
+}
 
-export const AddListsToGroupScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
-    const route = useRoute<RouteProp>();
-    const { mode, groupId, selectedListIds: initialSelectedIds, onSelect } = route.params || {};
-    
+export const AddListsToGroupScreen: React.FC<ScreenProps> = ({ 
+    navigate, 
+    goBack, 
+    mode, 
+    groupId, 
+    selectedListIds: initialSelectedIds, 
+    onSelect 
+}) => {
     const [lists, setLists] = useState<BroadcastList[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -55,21 +63,20 @@ export const AddListsToGroupScreen: React.FC = () => {
         const selectedListIds = Array.from(selectedIds);
         if (mode === 'creation' && onSelect) {
             onSelect(selectedListIds);
-            navigation.goBack();
+            goBack();
         } else if (mode === 'assignment' && groupId) {
-            // Assign directly to group
             assignListsToGroup();
         } else {
-            navigation.goBack();
+            goBack();
         }
     };
 
     const assignListsToGroup = async () => {
         try {
             for (const listId of selectedIds) {
-                await BroadcastGroupService.assignListToGroup(listId, groupId);
+                await BroadcastGroupService.assignListToGroup(listId, groupId!);
             }
-            navigation.goBack();
+            goBack();
         } catch (error) {
             console.error('Failed to assign lists:', error);
         }
@@ -91,6 +98,14 @@ export const AddListsToGroupScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={goBack} style={styles.backButton}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Add Lists</Text>
+                <View style={styles.placeholder} />
+            </View>
+
             <View style={styles.searchContainer}>
                 <TextInput
                     style={styles.searchInput}
@@ -146,12 +161,39 @@ export const AddListsToGroupScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#E5E5E5',
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#E5E5E5',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 16,
+        backgroundColor: '#075E54',
+    },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#ffffff',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#ffffff',
+        flex: 1,
+        textAlign: 'center',
+    },
+    placeholder: {
+        width: 50,
     },
     searchContainer: {
         backgroundColor: '#ffffff',
@@ -166,7 +208,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     listContent: {
-        paddingBottom: 80,
+        paddingBottom: 100,
     },
     emptyContainer: {
         alignItems: 'center',
@@ -195,7 +237,7 @@ const styles = StyleSheet.create({
         bottom: 20,
         left: 20,
         right: 20,
-        backgroundColor: '#2196F3',
+        backgroundColor: '#25D366',
         padding: 16,
         borderRadius: 12,
         alignItems: 'center',

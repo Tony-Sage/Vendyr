@@ -10,20 +10,19 @@ import {
     RefreshControl,
     Linking,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { detectionService } from '../services/DetectionService';
 import { BroadcastList } from '../types';
 import { BroadcastListCard } from '../components/BroadcastListCard';
 
-type NavigationProp = any;
-type RouteProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+    goToHome: () => void;
+    groupId: string;
+}
 
-export const GroupDetailScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
-    const route = useRoute<RouteProp>();
-    const { groupId } = route.params;
-    
+export const GroupDetailScreen: React.FC<ScreenProps> = ({ navigate, goBack, goToHome, groupId }) => {
     const [lists, setLists] = useState<BroadcastList[]>([]);
     const [groupName, setGroupName] = useState('');
     const [loading, setLoading] = useState(true);
@@ -34,7 +33,6 @@ export const GroupDetailScreen: React.FC = () => {
             const group = await BroadcastGroupService.getGroupById(groupId);
             if (group) {
                 setGroupName(group.name);
-                navigation.setOptions({ title: group.name });
             }
             
             const groupLists = await BroadcastGroupService.getListsByGroup(groupId);
@@ -56,8 +54,8 @@ export const GroupDetailScreen: React.FC = () => {
         setRefreshing(false);
     };
 
-    const handleListPress = (listId: string) => {
-        navigation.navigate('ListContacts', { listId });
+    const handleListPress = (listId: string, listName: string) => {
+        navigate('ListContacts', { listId, listName, returnToScreen: 'GroupDetail', returnParams: { groupId } });
     };
 
     const handleRemoveList = (listId: string, listName: string) => {
@@ -79,33 +77,54 @@ export const GroupDetailScreen: React.FC = () => {
     };
 
     const handleAddList = () => {
-        navigation.navigate('AddListsToGroup', {
+        navigate('AddListsToGroup', {
             mode: 'assignment',
             groupId: groupId,
+            onComplete: () => {
+                loadData();
+            }
         });
     };
 
     const handleCreateBroadcast = async () => {
-        // Set active group and open WhatsApp
         await detectionService.setActiveGroup(groupId);
         
-        // Open WhatsApp
-        const url = 'whatsapp://';
+        // Try multiple WhatsApp URL schemes
+        const whatsappUrl = 'whatsapp://';
+        const whatsappBusinessUrl = 'whatsapp://send';
+        
         try {
-            await Linking.openURL(url);
+            const canOpen = await Linking.canOpenURL(whatsappUrl);
+            if (canOpen) {
+                await Linking.openURL(whatsappUrl);
+            } else {
+                const canOpenBusiness = await Linking.canOpenURL(whatsappBusinessUrl);
+                if (canOpenBusiness) {
+                    await Linking.openURL(whatsappBusinessUrl);
+                } else {
+                    Alert.alert(
+                        'WhatsApp Not Found',
+                        'Please make sure WhatsApp is installed on your device.',
+                        [
+                            { text: 'OK' },
+                            { text: 'Open Play Store', onPress: () => Linking.openURL('market://details?id=com.whatsapp') }
+                        ]
+                    );
+                }
+            }
         } catch (error) {
-            Alert.alert('Error', 'WhatsApp is not installed');
+            Alert.alert('Error', 'Could not open WhatsApp. Please make sure it is installed.');
         }
     };
 
     const handleInfoPress = () => {
-        navigation.navigate('GroupInfo', { groupId });
+        navigate('GroupInfo', { groupId });
     };
 
     if (loading) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#2196F3" />
+                <ActivityIndicator size="large" color="#25D366" />
             </View>
         );
     }
@@ -113,6 +132,10 @@ export const GroupDetailScreen: React.FC = () => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
+                <TouchableOpacity onPress={goBack} style={styles.backButton}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle} numberOfLines={1}>{groupName}</Text>
                 <TouchableOpacity onPress={handleInfoPress} style={styles.infoButton}>
                     <Text style={styles.infoIcon}>ℹ️</Text>
                 </TouchableOpacity>
@@ -135,13 +158,13 @@ export const GroupDetailScreen: React.FC = () => {
                             id={item.id}
                             name={item.name}
                             contactCount={item.contactCount || 0}
-                            onPress={handleListPress}
+                            onPress={() => handleListPress(item.id, item.name)}
                             onLongPress={() => handleRemoveList(item.id, item.name)}
                         />
                     )}
                     contentContainerStyle={styles.listContent}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#25D366']} />
                     }
                 />
             )}
@@ -160,24 +183,43 @@ export const GroupDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#E5E5E5',
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#E5E5E5',
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingTop: 12,
+        paddingTop: 60,
+        paddingBottom: 16,
+        backgroundColor: '#075E54',
+    },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#ffffff',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#ffffff',
+        flex: 1,
+        textAlign: 'center',
     },
     infoButton: {
         padding: 8,
     },
     infoIcon: {
-        fontSize: 22,
+        fontSize: 20,
+        color: '#ffffff',
     },
     listContent: {
         paddingBottom: 100,
@@ -211,7 +253,7 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#2196F3',
+        backgroundColor: '#25D366',
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: '#000',
@@ -232,7 +274,7 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#25D366',
+        backgroundColor: '#075E54',
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: '#000',
@@ -243,5 +285,6 @@ const styles = StyleSheet.create({
     },
     whatsappFabText: {
         fontSize: 28,
+        color: '#ffffff',
     },
 });

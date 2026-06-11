@@ -8,15 +8,16 @@ import {
     Alert,
     ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Database from '../database/database';
 import { UngroupedListNotification } from '../types';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 
-type NavigationProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+}
 
-export const NotificationsScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
+export const NotificationsScreen: React.FC<ScreenProps> = ({ navigate, goBack }) => {
     const [notifications, setNotifications] = useState<UngroupedListNotification[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -31,11 +32,9 @@ export const NotificationsScreen: React.FC = () => {
         }
     };
 
-    useFocusEffect(
-        useCallback(() => {
-            loadNotifications();
-        }, [])
-    );
+    useEffect(() => {
+        loadNotifications();
+    }, []);
 
     const handleAssign = async (listId: string, listName: string) => {
         const groups = await BroadcastGroupService.getAllGroups();
@@ -46,7 +45,7 @@ export const NotificationsScreen: React.FC = () => {
                 'You need to create a group first before assigning lists.',
                 [
                     { text: 'Cancel', style: 'cancel' },
-                    { text: 'Create Group', onPress: () => navigation.navigate('GroupCreation') },
+                    { text: 'Create Group', onPress: () => navigate('GroupCreation') },
                 ]
             );
             return;
@@ -112,6 +111,19 @@ export const NotificationsScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={goBack} style={styles.backButton}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Notifications</Text>
+                {notifications.length > 0 && (
+                    <TouchableOpacity onPress={handleClearAll}>
+                        <Text style={styles.clearText}>Clear All</Text>
+                    </TouchableOpacity>
+                )}
+                {notifications.length === 0 && <View style={styles.placeholder} />}
+            </View>
+
             {notifications.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <Text style={styles.emptyIcon}>🔔</Text>
@@ -121,44 +133,33 @@ export const NotificationsScreen: React.FC = () => {
                     </Text>
                 </View>
             ) : (
-                <>
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>
-                            {notifications.length} ungrouped list{notifications.length !== 1 ? 's' : ''}
-                        </Text>
-                        <TouchableOpacity onPress={handleClearAll}>
-                            <Text style={styles.clearText}>Clear All</Text>
-                        </TouchableOpacity>
-                    </View>
-                    
-                    <FlatList
-                        data={notifications}
-                        keyExtractor={(item) => item.listId}
-                        renderItem={({ item }) => (
-                            <View style={styles.notificationCard}>
-                                <View style={styles.notificationIcon}>
-                                    <Text style={styles.iconText}>📢</Text>
-                                </View>
-                                <View style={styles.notificationInfo}>
-                                    <Text style={styles.listName}>{item.listName}</Text>
-                                    <Text style={styles.detectedText}>
-                                        Detected {formatDate(item.detectedAt)}
-                                    </Text>
-                                    <Text style={styles.contactCount}>
-                                        {item.contactCount} contact{item.contactCount !== 1 ? 's' : ''}
-                                    </Text>
-                                </View>
-                                <TouchableOpacity 
-                                    style={styles.assignButton}
-                                    onPress={() => handleAssign(item.listId, item.listName)}
-                                >
-                                    <Text style={styles.assignButtonText}>Assign</Text>
-                                </TouchableOpacity>
+                <FlatList
+                    data={notifications}
+                    keyExtractor={(item) => item.listId}
+                    renderItem={({ item }) => (
+                        <View style={styles.notificationCard}>
+                            <View style={styles.notificationIcon}>
+                                <Text style={styles.iconText}>📢</Text>
                             </View>
-                        )}
-                        contentContainerStyle={styles.listContent}
-                    />
-                </>
+                            <View style={styles.notificationInfo}>
+                                <Text style={styles.listName}>{item.listName}</Text>
+                                <Text style={styles.detectedText}>
+                                    Detected {formatDate(item.detectedAt)}
+                                </Text>
+                                <Text style={styles.contactCount}>
+                                    {item.contactCount} contact{item.contactCount !== 1 ? 's' : ''}
+                                </Text>
+                            </View>
+                            <TouchableOpacity 
+                                style={styles.assignButton}
+                                onPress={() => handleAssign(item.listId, item.listName)}
+                            >
+                                <Text style={styles.assignButtonText}>Assign</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                    contentContainerStyle={styles.listContent}
+                />
             )}
         </View>
     );
@@ -176,23 +177,34 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 16,
         backgroundColor: '#ffffff',
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
     },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#2196F3',
+    },
     headerTitle: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#5f6368',
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#202124',
     },
     clearText: {
         fontSize: 14,
         color: '#F44336',
         fontWeight: '500',
+    },
+    placeholder: {
+        width: 60,
     },
     listContent: {
         paddingBottom: 20,

@@ -9,15 +9,16 @@ import {
     ActivityIndicator,
     Alert,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { BroadcastList } from '../types';
 import { BroadcastListCard } from '../components/BroadcastListCard';
 
-type NavigationProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+}
 
-export const UnassignedListsScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
+export const UnassignedListsScreen: React.FC<ScreenProps> = ({ navigate, goBack }) => {
     const [lists, setLists] = useState<BroadcastList[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -33,14 +34,12 @@ export const UnassignedListsScreen: React.FC = () => {
         }
     };
 
-    useFocusEffect(
-        useCallback(() => {
-            loadUnassignedLists();
-        }, [])
-    );
+    useEffect(() => {
+        loadUnassignedLists();
+    }, []);
 
     const handleListPress = (listId: string) => {
-        navigation.navigate('ListContacts', { listId });
+        navigate('ListContacts', { listId });
     };
 
     const handleAssignPress = () => {
@@ -60,8 +59,7 @@ export const UnassignedListsScreen: React.FC = () => {
     };
 
     const assignAllLists = async () => {
-        // Navigate to group selection
-        navigation.navigate('SetActiveGroup', { 
+        navigate('SetActiveGroup', { 
             selectionMode: true,
             onSelectGroup: async (groupId: string) => {
                 for (const list of lists) {
@@ -90,6 +88,9 @@ export const UnassignedListsScreen: React.FC = () => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
+                <TouchableOpacity onPress={goBack} style={styles.backButton}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
                 <Text style={styles.headerTitle}>Unassigned Lists</Text>
                 <TouchableOpacity onPress={handleAssignPress} style={styles.assignButton}>
                     <Text style={styles.assignButtonText}>Assign All</Text>
@@ -149,18 +150,25 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 12,
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 16,
         backgroundColor: '#ffffff',
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
     },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#2196F3',
+    },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 18,
+        fontWeight: '600',
         color: '#202124',
     },
     assignButton: {

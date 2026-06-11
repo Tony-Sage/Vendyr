@@ -8,13 +8,14 @@ import {
     Alert,
     ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 
-type NavigationProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+}
 
-export const GroupCreationScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
+export const GroupCreationScreen: React.FC<ScreenProps> = ({ navigate, goBack }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [selectedLists, setSelectedLists] = useState<string[]>([]);
@@ -29,14 +30,13 @@ export const GroupCreationScreen: React.FC = () => {
             const group = await BroadcastGroupService.createGroup(name.trim(), description.trim() || null);
             
             if (selectedLists.length > 0) {
-                // Assign selected lists to the new group
                 for (const listId of selectedLists) {
                     await BroadcastGroupService.assignListToGroup(listId, group.id);
                 }
             }
             
             Alert.alert('Success', `Group "${name}" created`, [
-                { text: 'OK', onPress: () => navigation.goBack() },
+                { text: 'OK', onPress: goBack },
             ]);
         } catch (error) {
             Alert.alert('Error', 'Failed to create group');
@@ -45,7 +45,7 @@ export const GroupCreationScreen: React.FC = () => {
     };
 
     const handleAddLists = () => {
-        navigation.navigate('AddListsToGroup', {
+        navigate('AddListsToGroup', {
             mode: 'creation',
             selectedListIds: selectedLists,
             onSelect: (listIds: string[]) => setSelectedLists(listIds),
@@ -54,6 +54,14 @@ export const GroupCreationScreen: React.FC = () => {
 
     return (
         <ScrollView style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={goBack} style={styles.backButton}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>New Group</Text>
+                <View style={styles.placeholder} />
+            </View>
+
             <View style={styles.content}>
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Group Name *</Text>
@@ -105,7 +113,31 @@ export const GroupCreationScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#E5E5E5',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 16,
+        backgroundColor: '#075E54',
+    },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#ffffff',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#ffffff',
+    },
+    placeholder: {
+        width: 50,
     },
     content: {
         padding: 20,
@@ -149,18 +181,18 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     addButton: {
-        backgroundColor: '#e8f0fe',
+        backgroundColor: '#DCF8C6',
         padding: 12,
         borderRadius: 8,
         alignItems: 'center',
     },
     addButtonText: {
-        color: '#2196F3',
+        color: '#075E54',
         fontSize: 14,
         fontWeight: '500',
     },
     createButton: {
-        backgroundColor: '#2196F3',
+        backgroundColor: '#25D366',
         padding: 16,
         borderRadius: 8,
         alignItems: 'center',

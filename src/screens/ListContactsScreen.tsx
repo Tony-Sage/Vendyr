@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -10,27 +10,31 @@ import {
     Linking,
     Alert,
 } from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { ListContact } from '../types';
 
-type NavigationProp = any;
-type RouteProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+    goToHome: () => void;
+    listId: string;
+    listName?: string;
+    returnToScreen?: string;
+    returnParams?: any;
+}
 
-export const ListContactsScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
-    const route = useRoute<RouteProp>();
-    const { listId, listName } = route.params || {};
-    
+export const ListContactsScreen: React.FC<ScreenProps> = ({ 
+    navigate, 
+    goBack, 
+    goToHome, 
+    listId, 
+    listName,
+    returnToScreen,
+    returnParams 
+}) => {
     const [contacts, setContacts] = useState<ListContact[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-
-    useEffect(() => {
-        if (listName) {
-            navigation.setOptions({ title: listName });
-        }
-    }, [listName]);
 
     const loadContacts = async () => {
         try {
@@ -43,23 +47,40 @@ export const ListContactsScreen: React.FC = () => {
         }
     };
 
-    useFocusEffect(
-        useCallback(() => {
-            loadContacts();
-        }, [listId])
-    );
+    useEffect(() => {
+        loadContacts();
+    }, [listId]);
 
-    const handleContactPress = (phoneNumber: string) => {
-        // Normalize phone number (remove spaces, ensure format)
-        let normalizedPhone = phoneNumber.replace(/\s/g, '');
-        if (!normalizedPhone.startsWith('+')) {
-            normalizedPhone = '+' + normalizedPhone;
+    const handleGoBack = () => {
+        if (returnToScreen === 'GroupDetail' && returnParams) {
+            navigate(returnToScreen, returnParams);
+        } else {
+            goBack();
         }
+    };
+
+    const handleContactPress = async (phoneNumber: string) => {
+        let normalizedPhone = phoneNumber.replace(/\s/g, '').replace(/^\+/, '');
         
         const url = `whatsapp://send?phone=${normalizedPhone}`;
-        Linking.openURL(url).catch(() => {
-            Alert.alert('Error', 'Could not open WhatsApp. Make sure it is installed.');
-        });
+        
+        try {
+            const canOpen = await Linking.canOpenURL(url);
+            if (canOpen) {
+                await Linking.openURL(url);
+            } else {
+                Alert.alert(
+                    'WhatsApp Not Found',
+                    'Please make sure WhatsApp is installed on your device.',
+                    [
+                        { text: 'OK' },
+                        { text: 'Open Play Store', onPress: () => Linking.openURL('market://details?id=com.whatsapp') }
+                    ]
+                );
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Could not open WhatsApp. Please make sure it is installed.');
+        }
     };
 
     const filteredContacts = searchQuery.trim()
@@ -72,13 +93,21 @@ export const ListContactsScreen: React.FC = () => {
     if (loading) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#2196F3" />
+                <ActivityIndicator size="large" color="#25D366" />
             </View>
         );
     }
 
     return (
         <View style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle} numberOfLines={1}>{listName || 'Contacts'}</Text>
+                <View style={styles.placeholder} />
+            </View>
+
             <View style={styles.searchContainer}>
                 <TextInput
                     style={styles.searchInput}
@@ -139,12 +168,39 @@ export const ListContactsScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#E5E5E5',
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#E5E5E5',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 16,
+        backgroundColor: '#075E54',
+    },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#ffffff',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#ffffff',
+        flex: 1,
+        textAlign: 'center',
+    },
+    placeholder: {
+        width: 50,
     },
     searchContainer: {
         backgroundColor: '#ffffff',
@@ -179,7 +235,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#e8f0fe',
+        backgroundColor: '#DCF8C6',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
@@ -187,7 +243,7 @@ const styles = StyleSheet.create({
     avatarText: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#2196F3',
+        color: '#075E54',
     },
     contactInfo: {
         flex: 1,

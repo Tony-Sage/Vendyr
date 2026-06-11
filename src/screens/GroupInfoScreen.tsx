@@ -9,18 +9,17 @@ import {
     ActivityIndicator,
     ScrollView,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { BroadcastGroup } from '../types';
 
-type NavigationProp = any;
-type RouteProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+    goToHome: () => void;
+    groupId: string;
+}
 
-export const GroupInfoScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
-    const route = useRoute<RouteProp>();
-    const { groupId } = route.params;
-    
+export const GroupInfoScreen: React.FC<ScreenProps> = ({ navigate, goBack, goToHome, groupId }) => {
     const [group, setGroup] = useState<BroadcastGroup | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
@@ -71,7 +70,7 @@ export const GroupInfoScreen: React.FC = () => {
                     style: 'destructive',
                     onPress: async () => {
                         await BroadcastGroupService.deleteGroup(groupId);
-                        navigation.goBack();
+                        goToHome();
                     }
                 },
             ]
@@ -81,7 +80,7 @@ export const GroupInfoScreen: React.FC = () => {
     if (loading) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#2196F3" />
+                <ActivityIndicator size="large" color="#25D366" />
             </View>
         );
     }
@@ -96,6 +95,14 @@ export const GroupInfoScreen: React.FC = () => {
 
     return (
         <ScrollView style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={goBack} style={styles.backButton}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Group Details</Text>
+                <View style={styles.placeholder} />
+            </View>
+
             <View style={styles.content}>
                 {isEditing ? (
                     <>
@@ -194,12 +201,37 @@ export const GroupInfoScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#E5E5E5',
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#E5E5E5',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 16,
+        backgroundColor: '#075E54',
+    },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#ffffff',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#ffffff',
+    },
+    placeholder: {
+        width: 50,
     },
     content: {
         padding: 20,
@@ -247,7 +279,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     saveButton: {
-        backgroundColor: '#2196F3',
+        backgroundColor: '#25D366',
         marginLeft: 10,
     },
     saveButtonText: {
@@ -281,7 +313,7 @@ const styles = StyleSheet.create({
     },
     editIcon: {
         fontSize: 18,
-        color: '#2196F3',
+        color: '#25D366',
         padding: 4,
     },
     divider: {

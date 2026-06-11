@@ -9,15 +9,17 @@ import {
     ActivityIndicator,
     RefreshControl,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { detectionService } from '../services/DetectionService';
 import { BroadcastGroup } from '../types';
 
-type NavigationProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+    goToHome: () => void;
+}
 
-export const HomeScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
+export const HomeScreen: React.FC<ScreenProps> = ({ navigate, goBack, goToHome }) => {
     const [groups, setGroups] = useState<BroadcastGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -36,11 +38,9 @@ export const HomeScreen: React.FC = () => {
         }
     };
 
-    useFocusEffect(
-        useCallback(() => {
-            loadGroups();
-        }, [])
-    );
+    useEffect(() => {
+        loadGroups();
+    }, []);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -49,11 +49,29 @@ export const HomeScreen: React.FC = () => {
     };
 
     const handleGroupPress = (groupId: string) => {
-        navigation.navigate('GroupDetail', { groupId });
+        navigate('GroupDetail', { groupId });
     };
 
     const handleCreateGroup = () => {
-        navigation.navigate('GroupCreation');
+        navigate('GroupCreation');
+    };
+
+    const handleDeleteGroup = (groupId: string, groupName: string) => {
+        Alert.alert(
+            'Delete Group',
+            `Delete "${groupName}"?\n\nThe group will be removed, but all broadcast lists will remain unassigned in WhatsApp.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                    text: 'Delete', 
+                    style: 'destructive',
+                    onPress: async () => {
+                        await BroadcastGroupService.deleteGroup(groupId);
+                        await loadGroups();
+                    }
+                },
+            ]
+        );
     };
 
     const handleMenuPress = () => {
@@ -61,9 +79,9 @@ export const HomeScreen: React.FC = () => {
             'Menu',
             'Choose an option',
             [
-                { text: 'Settings', onPress: () => navigation.navigate('Settings') },
-                { text: 'Notifications', onPress: () => navigation.navigate('Notifications') },
-                { text: 'Set Active Group', onPress: () => navigation.navigate('SetActiveGroup') },
+                { text: 'Settings', onPress: () => navigate('Settings') },
+                { text: 'Notifications', onPress: () => navigate('Notifications') },
+                { text: 'Set Active Group', onPress: () => navigate('SetActiveGroup') },
                 { text: 'Cancel', style: 'cancel' },
             ],
             { cancelable: true }
@@ -76,6 +94,7 @@ export const HomeScreen: React.FC = () => {
             <TouchableOpacity
                 style={[styles.groupCard, isActive && styles.activeCard]}
                 onPress={() => handleGroupPress(item.id)}
+                onLongPress={() => handleDeleteGroup(item.id, item.name)}
                 activeOpacity={0.7}
             >
                 <View style={styles.groupIcon}>
@@ -110,19 +129,10 @@ export const HomeScreen: React.FC = () => {
         );
     };
 
-    const renderUnassignedCard = () => {
-        const unassignedCount = groups.filter(g => g.id === 'unassigned').length > 0 
-            ? groups.find(g => g.id === 'unassigned')?.listCount || 0
-            : 0;
-        
-        // Unassigned is handled separately - we don't store it as a real group
-        return null;
-    };
-
     if (loading) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#2196F3" />
+                <ActivityIndicator size="large" color="#25D366" />
             </View>
         );
     }
@@ -142,7 +152,7 @@ export const HomeScreen: React.FC = () => {
                 renderItem={renderGroupCard}
                 contentContainerStyle={styles.listContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#25D366']} />
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
@@ -165,12 +175,13 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#E5E5E5',
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#E5E5E5',
     },
     header: {
         flexDirection: 'row',
@@ -179,21 +190,19 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 60,
         paddingBottom: 20,
-        backgroundColor: '#ffffff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        backgroundColor: '#075E54',
     },
     title: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: '#202124',
+        color: '#ffffff',
     },
     menuButton: {
         padding: 8,
     },
     menuIcon: {
         fontSize: 24,
-        color: '#5f6368',
+        color: '#ffffff',
     },
     listContent: {
         paddingBottom: 80,
@@ -214,14 +223,14 @@ const styles = StyleSheet.create({
     },
     activeCard: {
         borderWidth: 2,
-        borderColor: '#2196F3',
-        backgroundColor: '#f0f8ff',
+        borderColor: '#25D366',
+        backgroundColor: '#E8F5E9',
     },
     groupIcon: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#e8f0fe',
+        backgroundColor: '#DCF8C6',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
@@ -244,7 +253,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     activeBadge: {
-        backgroundColor: '#2196F3',
+        backgroundColor: '#25D366',
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 12,
@@ -301,7 +310,7 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#2196F3',
+        backgroundColor: '#25D366',
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: '#000',

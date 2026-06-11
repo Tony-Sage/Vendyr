@@ -10,16 +10,17 @@ import {
     ActivityIndicator,
     Linking,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import * as Database from '../database/database';
 import { storage } from '../utils/storage';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { mockAccessibilityService } from '../services/MockAccessibilityService';
 
-type NavigationProp = any;
+interface ScreenProps {
+    navigate: (screen: string, params?: any) => void;
+    goBack: () => void;
+}
 
-export const SettingsScreen: React.FC = () => {
-    const navigation = useNavigation<NavigationProp>();
+export const SettingsScreen: React.FC<ScreenProps> = ({ navigate, goBack }) => {
     const [settings, setSettings] = useState({
         floatingBubbleEnabled: true,
         pushNotificationsEnabled: true,
@@ -47,10 +48,7 @@ export const SettingsScreen: React.FC = () => {
             const lastSync = await storage.getLastSyncTime();
             setLastSyncTime(lastSync);
             
-            // For mock, we assume accessibility is enabled
             setAccessibilityEnabled(mockAccessibilityService.isAccessibilityEnabled());
-            
-            // Overlay status - will be real in Phase 2
             setOverlayEnabled(false);
         } catch (error) {
             console.error('Failed to load settings:', error);
@@ -116,7 +114,6 @@ export const SettingsScreen: React.FC = () => {
                     text: 'Clear', 
                     style: 'destructive',
                     onPress: async () => {
-                        // Clear database tables
                         const db = Database.getDb();
                         await db.runAsync('DELETE FROM broadcast_groups');
                         await db.runAsync('DELETE FROM broadcast_lists');
@@ -147,6 +144,14 @@ export const SettingsScreen: React.FC = () => {
 
     return (
         <ScrollView style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={goBack} style={styles.backButton}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Settings</Text>
+                <View style={styles.placeholder} />
+            </View>
+
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Permissions</Text>
                 
@@ -319,6 +324,32 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 16,
+        backgroundColor: '#ffffff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    backButton: {
+        padding: 8,
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: '#2196F3',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#202124',
+    },
+    placeholder: {
+        width: 50,
     },
     section: {
         backgroundColor: '#ffffff',
