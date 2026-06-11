@@ -30,6 +30,7 @@ export const GroupInfoScreen: React.FC<ScreenProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadGroup();
@@ -54,6 +55,7 @@ export const GroupInfoScreen: React.FC<ScreenProps> = ({
       return;
     }
 
+    setSaving(true);
     try {
       await BroadcastGroupService.updateGroup(
         groupId,
@@ -62,9 +64,12 @@ export const GroupInfoScreen: React.FC<ScreenProps> = ({
       );
       await loadGroup();
       setIsEditing(false);
-      Alert.alert("Success", "Group updated");
+      Alert.alert("Success", "Group updated successfully");
     } catch (error) {
       Alert.alert("Error", "Failed to update group");
+      console.error(error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -78,8 +83,13 @@ export const GroupInfoScreen: React.FC<ScreenProps> = ({
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await BroadcastGroupService.deleteGroup(groupId);
-            goToHome();
+            try {
+              await BroadcastGroupService.deleteGroup(groupId);
+              goToHome();
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete group");
+              console.error(error);
+            }
           },
         },
       ],
@@ -114,25 +124,28 @@ export const GroupInfoScreen: React.FC<ScreenProps> = ({
 
       <View style={styles.content}>
         {isEditing ? (
+          // Edit Mode
           <>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Group Name</Text>
+              <Text style={styles.label}>Group Name *</Text>
               <TextInput
                 style={styles.input}
                 value={editName}
                 onChangeText={setEditName}
-                placeholder="Enter group name"
+                placeholder="e.g., Marketing, Sales, Support"
+                placeholderTextColor="#9aa0a6"
                 maxLength={50}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>Description (optional)</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={editDescription}
                 onChangeText={setEditDescription}
-                placeholder="Enter description (optional)"
+                placeholder="Describe what this group is for..."
+                placeholderTextColor="#9aa0a6"
                 multiline
                 numberOfLines={3}
                 maxLength={200}
@@ -150,58 +163,72 @@ export const GroupInfoScreen: React.FC<ScreenProps> = ({
               <TouchableOpacity
                 style={[styles.button, styles.saveButton]}
                 onPress={handleSave}
+                disabled={saving}
               >
-                <Text style={styles.saveButtonText}>Save</Text>
+                <Text style={styles.saveButtonText}>
+                  {saving ? "Saving..." : "Save Changes"}
+                </Text>
               </TouchableOpacity>
             </View>
           </>
         ) : (
+          // View Mode
           <>
-            <View style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Name</Text>
-                <Text style={styles.infoValue}>{group.name}</Text>
-                <TouchableOpacity onPress={() => setIsEditing(true)}>
-                  <Text style={styles.editIcon}>✏️</Text>
-                </TouchableOpacity>
-              </View>
+            {/* Group Info Section */}
+            <View style={styles.infoSection}>
+              <View style={styles.infoCard}>
+                <View style={styles.infoHeader}>
+                  <Text style={styles.infoHeaderTitle}>Group Information</Text>
+                  <TouchableOpacity onPress={() => setIsEditing(true)}>
+                    <Text style={styles.editButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.infoField}>
+                  <Text style={styles.infoLabel}>Group Name</Text>
+                  <Text style={styles.infoValue}>{group.name}</Text>
+                </View>
 
-              <View style={styles.divider} />
+                <View style={styles.divider} />
 
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Description</Text>
-                <Text
-                  style={[
-                    styles.infoValue,
-                    !group.description && styles.placeholderText,
-                  ]}
-                >
-                  {group.description || "No description"}
-                </Text>
-                <TouchableOpacity onPress={() => setIsEditing(true)}>
-                  <Text style={styles.editIcon}>✏️</Text>
-                </TouchableOpacity>
+                <View style={styles.infoField}>
+                  <Text style={styles.infoLabel}>Description</Text>
+                  <Text style={[styles.infoValue, !group.description && styles.placeholderText]}>
+                    {group.description || "No description provided"}
+                  </Text>
+                </View>
               </View>
             </View>
 
-            <View style={styles.statsCard}>
+            {/* Statistics Section */}
+            <View style={styles.statsSection}>
               <Text style={styles.statsTitle}>Statistics</Text>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Number of lists</Text>
-                <Text style={styles.statValue}>{group.listCount || 0}</Text>
-              </View>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Total contacts</Text>
-                <Text style={styles.statValue}>{group.totalContacts || 0}</Text>
-              </View>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Created</Text>
-                <Text style={styles.statValue}>
-                  {new Date(group.createdAt).toLocaleDateString()}
-                </Text>
+              
+              <View style={styles.statsCard}>
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>Number of Lists</Text>
+                  <Text style={styles.statValue}>{group.listCount || 0}</Text>
+                </View>
+                
+                <View style={styles.statDivider} />
+                
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>Total Contacts</Text>
+                  <Text style={styles.statValue}>{group.totalContacts || 0}</Text>
+                </View>
+                
+                <View style={styles.statDivider} />
+                
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>Created On</Text>
+                  <Text style={styles.statValue}>
+                    {new Date(group.createdAt).toLocaleDateString()}
+                  </Text>
+                </View>
               </View>
             </View>
 
+            {/* Delete Button */}
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={handleDelete}
@@ -253,8 +280,9 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  // Edit mode styles (matching GroupCreationScreen)
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   label: {
     fontSize: 14,
@@ -286,13 +314,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelButton: {
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#ffffff",
     marginRight: 10,
     borderWidth: 1,
     borderColor: "#ddd",
   },
   cancelButtonText: {
     color: "#5f6368",
+    fontSize: 14,
     fontWeight: "500",
   },
   saveButton: {
@@ -301,26 +330,48 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#ffffff",
+    fontSize: 14,
     fontWeight: "500",
+  },
+  // View mode styles
+  infoSection: {
+    marginBottom: 20,
   },
   infoCard: {
     backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
   },
-  infoRow: {
+  infoHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  infoHeaderTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#202124",
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#25D366",
+  },
+  infoField: {
+    marginBottom: 16,
   },
   infoLabel: {
-    width: 100,
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: "500",
     color: "#5f6368",
+    marginBottom: 6,
+    textTransform: "uppercase",
   },
   infoValue: {
-    flex: 1,
     fontSize: 16,
     color: "#202124",
   },
@@ -328,19 +379,13 @@ const styles = StyleSheet.create({
     color: "#9aa0a6",
     fontStyle: "italic",
   },
-  editIcon: {
-    fontSize: 18,
-    color: "#25D366",
-    padding: 4,
-  },
   divider: {
     height: 1,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#f0f0f0",
+    marginVertical: 12,
   },
-  statsCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
+  // Statistics section styles
+  statsSection: {
     marginBottom: 20,
   },
   statsTitle: {
@@ -349,26 +394,38 @@ const styles = StyleSheet.create({
     color: "#202124",
     marginBottom: 12,
   },
+  statsCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 16,
+  },
   statRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    alignItems: "center",
+    paddingVertical: 12,
   },
   statLabel: {
     fontSize: 14,
     color: "#5f6368",
   },
   statValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "500",
     color: "#202124",
   },
+  statDivider: {
+    height: 1,
+    backgroundColor: "#f0f0f0",
+  },
+  // Delete button
   deleteButton: {
     backgroundColor: "#ffebee",
     padding: 16,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 10,
+    marginBottom: 30,
   },
   deleteButtonText: {
     color: "#F44336",

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -8,6 +8,10 @@ import {
     Alert,
     ActivityIndicator,
     RefreshControl,
+    Modal,
+    TouchableWithoutFeedback,
+    Animated,
+    Dimensions,
 } from 'react-native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { detectionService } from '../services/DetectionService';
@@ -24,6 +28,9 @@ export const HomeScreen: React.FC<ScreenProps> = ({ navigate, goBack, goToHome }
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+    const [menuVisible, setMenuVisible] = useState(false);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
     const loadGroups = async () => {
         try {
@@ -74,18 +81,57 @@ export const HomeScreen: React.FC<ScreenProps> = ({ navigate, goBack, goToHome }
         );
     };
 
-    const handleMenuPress = () => {
-        Alert.alert(
-            'Menu',
-            'Choose an option',
-            [
-                { text: 'Settings', onPress: () => navigate('Settings') },
-                { text: 'Notifications', onPress: () => navigate('Notifications') },
-                { text: 'Set Active Group', onPress: () => navigate('SetActiveGroup') },
-                { text: 'Cancel', style: 'cancel' },
-            ],
-            { cancelable: true }
-        );
+    const openMenu = () => {
+        setMenuVisible(true);
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 200,
+                useNativeDriver: true,
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                friction: 5,
+                tension: 40,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    };
+
+    const closeMenu = () => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 0.9,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+        ]).start(() => {
+            setMenuVisible(false);
+        });
+    };
+
+    const handleMenuItemPress = (action: string) => {
+        closeMenu();
+        setTimeout(() => {
+            switch (action) {
+                case 'settings':
+                    navigate('Settings');
+                    break;
+                case 'notifications':
+                    navigate('Notifications');
+                    break;
+                case 'activeGroup':
+                    navigate('SetActiveGroup');
+                    break;
+                default:
+                    break;
+            }
+        }, 200);
     };
 
     const renderGroupCard = ({ item }: { item: BroadcastGroup }) => {
@@ -141,10 +187,62 @@ export const HomeScreen: React.FC<ScreenProps> = ({ navigate, goBack, goToHome }
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Vendyr</Text>
-                <TouchableOpacity onPress={handleMenuPress} style={styles.menuButton}>
+                <TouchableOpacity onPress={openMenu} style={styles.menuButton}>
                     <Text style={styles.menuIcon}>⋮</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Floating Menu Modal */}
+            <Modal
+                transparent={true}
+                visible={menuVisible}
+                animationType="none"
+                onRequestClose={closeMenu}
+            >
+                <TouchableWithoutFeedback onPress={closeMenu}>
+                    <View style={styles.modalOverlay}>
+                        <TouchableWithoutFeedback>
+                            <Animated.View 
+                                style={[
+                                    styles.menuContainer,
+                                    {
+                                        opacity: fadeAnim,
+                                        transform: [{ scale: scaleAnim }],
+                                    }
+                                ]}
+                            >
+                                <TouchableOpacity 
+                                    style={styles.menuItem}
+                                    onPress={() => handleMenuItemPress('settings')}
+                                >
+                                    <Text style={styles.menuItemIcon}>⚙️</Text>
+                                    <Text style={styles.menuItemText}>Settings</Text>
+                                </TouchableOpacity>
+                                
+                                <View style={styles.menuDivider} />
+                                
+                                <TouchableOpacity 
+                                    style={styles.menuItem}
+                                    onPress={() => handleMenuItemPress('notifications')}
+                                >
+                                    <Text style={styles.menuItemIcon}>🔔</Text>
+                                    <Text style={styles.menuItemText}>Notifications</Text>
+                                </TouchableOpacity>
+                                
+                                <View style={styles.menuDivider} />
+                                
+                                <TouchableOpacity 
+                                    style={styles.menuItem}
+                                    onPress={() => handleMenuItemPress('activeGroup')}
+                                >
+                                    <Text style={styles.menuItemIcon}>🎯</Text>
+                                    <Text style={styles.menuItemText}>Set Active Group</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
 
             <FlatList
                 data={groups}
@@ -171,6 +269,8 @@ export const HomeScreen: React.FC<ScreenProps> = ({ navigate, goBack, goToHome }
         </View>
     );
 };
+
+const { width: screenWidth } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
     container: {
@@ -203,6 +303,48 @@ const styles = StyleSheet.create({
     menuIcon: {
         fontSize: 24,
         color: '#ffffff',
+        fontWeight: '600',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    },
+    menuContainer: {
+        position: 'absolute',
+        top: 80, 
+        right: 16,
+        borderRadius: 8,
+        backgroundColor: '#ffffff',
+        minWidth: 200,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        overflow: 'hidden',
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: '#ffffff',
+    },
+    menuItemIcon: {
+        fontSize: 20,
+        marginRight: 12,
+    },
+    menuItemText: {
+        fontSize: 16,
+        color: '#202124',
+        fontWeight: '500',
+    },
+    menuDivider: {
+        height: 1,
+        backgroundColor: '#f0f0f0',
     },
     listContent: {
         paddingBottom: 80,

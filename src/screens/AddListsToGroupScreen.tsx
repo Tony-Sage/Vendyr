@@ -10,6 +10,7 @@ import {
     ActivityIndicator,
     Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { BroadcastList } from '../types';
 import { BroadcastListCard } from '../components/BroadcastListCard';
@@ -20,10 +21,12 @@ interface ScreenProps {
     mode?: string;
     groupId?: string;
     selectedListIds?: string[];
-    groupName?: string;        // Add this
-    groupDescription?: string; // Add this
-    onComplete?: (listIds: string[]) => void;  // Add callback
+    groupName?: string;
+    groupDescription?: string;
+    onComplete?: (listIds: string[]) => void;
 }
+
+const PENDING_LISTS_KEY = '@pending_group_lists';
 
 export const AddListsToGroupScreen: React.FC<ScreenProps> = ({ 
     navigate, 
@@ -31,15 +34,15 @@ export const AddListsToGroupScreen: React.FC<ScreenProps> = ({
     mode, 
     groupId, 
     selectedListIds: initialSelectedIds,
-    groupName = '',      // Receive the name
-    groupDescription = '', // Receive the description
+    groupName = '',
+    groupDescription = '',
     onComplete,
 }) => {
     const [lists, setLists] = useState<BroadcastList[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initialSelectedIds || []));
-    const [creatingGroup, setCreatingGroup] = useState(false);
+    const [assigning, setAssigning] = useState(false);
 
     useEffect(() => {
         loadUnassignedLists();
@@ -81,7 +84,17 @@ export const AddListsToGroupScreen: React.FC<ScreenProps> = ({
                 );
                 return;
             }
-            await createGroupAndAssignLists(selectedListIds);
+            
+            // Store selected lists in AsyncStorage
+            try {
+                await AsyncStorage.setItem(PENDING_LISTS_KEY, JSON.stringify(selectedListIds));
+            } catch (error) {
+                console.error('Error saving pending lists:', error);
+            }
+            
+            // Go back to creation screen
+            goBack();
+            
         } else if (mode === 'assignment' && groupId) {
             await assignListsToGroup(selectedListIds);
         } else {
@@ -89,52 +102,20 @@ export const AddListsToGroupScreen: React.FC<ScreenProps> = ({
         }
     };
 
-    const createGroupAndAssignLists = async (selectedListIds: string[]) => {
-        setCreatingGroup(true);
-        
-        try {
-            // Create the group with the provided name and description
-            const group = await BroadcastGroupService.createGroup(
-                groupName.trim(), 
-                groupDescription.trim() || null
-            );
-            
-            // Assign all selected lists to the new group
-            if (selectedListIds.length > 0) {
-                for (const listId of selectedListIds) {
-                    await BroadcastGroupService.assignListToGroup(listId, group.id);
-                }
-            }
-            
-            // Call the callback with selected lists if provided
-            if (onComplete) {
-                onComplete(selectedListIds);
-            }
-            
-            Alert.alert('Success', `Group "${groupName}" created with ${selectedListIds.length} list(s)`, [
-                { text: 'OK', onPress: () => {
-                    // Navigate back twice to go to the main screen
-                    goBack();
-                    goBack();
-                }}
-            ]);
-        } catch (error) {
-            console.error('Failed to create group:', error);
-            Alert.alert('Error', 'Failed to create group');
-        } finally {
-            setCreatingGroup(false);
-        }
-    };
-
     const assignListsToGroup = async (selectedListIds: string[]) => {
+        setAssigning(true);
         try {
             for (const listId of selectedListIds) {
                 await BroadcastGroupService.assignListToGroup(listId, groupId!);
             }
-            goBack();
+            Alert.alert('Success', `${selectedListIds.length} list(s) added to group`, [
+                { text: 'OK', onPress: goBack }
+            ]);
         } catch (error) {
             console.error('Failed to assign lists:', error);
             Alert.alert('Error', 'Failed to assign lists to group');
+        } finally {
+            setAssigning(false);
         }
     };
 
@@ -225,13 +206,13 @@ export const AddListsToGroupScreen: React.FC<ScreenProps> = ({
                 <TouchableOpacity 
                     style={[styles.confirmButton, (!groupName.trim() && mode === 'creation') && styles.disabledButton]}
                     onPress={handleConfirm}
-                    disabled={creatingGroup || (!groupName.trim() && mode === 'creation')}
+                    disabled={assigning || (!groupName.trim() && mode === 'creation')}
                 >
                     <Text style={styles.confirmButtonText}>
-                        {creatingGroup ? 'Creating Group...' : 
+                        {assigning ? 'Adding Lists...' : 
                          mode === 'creation' 
-                            ? `✓ Create Group "${groupName || '?'}" (${selectedIds.size} list${selectedIds.size !== 1 ? 's' : ''})`
-                            : `✓ Confirm (${selectedIds.size} selected)`
+                            ? `✓ Confirm Selection (${selectedIds.size} list${selectedIds.size !== 1 ? 's' : ''})`
+                            : `✓ Add to Group (${selectedIds.size} selected)`
                         }
                     </Text>
                 </TouchableOpacity>
