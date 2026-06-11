@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 60,
         paddingBottom: 16,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#075E54',
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
     },
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     },
     backButtonText: {
         fontSize: 16,
-        color: '#2196F3',
+        color: '#ffffff',
     },
     headerTitle: {
         fontSize: 18,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
         width: 50,
     },
     infoBanner: {
-        backgroundColor: '#e8f0fe',
+        backgroundColor: '#DCF8C6',
         padding: 16,
         marginHorizontal: 16,
         marginTop: 16,
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     infoText: {
-        color: '#2196F3',
+        color: '#075E54',
         fontSize: 14,
         textAlign: 'center',
     },
@@ -258,8 +258,8 @@ const styles = StyleSheet.create({
     },
     activeCard: {
         borderWidth: 2,
-        borderColor: '#2196F3',
-        backgroundColor: '#f0f8ff',
+        borderColor: '#25D366',
+        backgroundColor: '#E8F5E9',
     },
     groupIcon: {
         width: 48,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
         color: '#9aa0a6',
     },
     activeBadge: {
-        backgroundColor: '#2196F3',
+        backgroundColor: '#25D366',
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 12,

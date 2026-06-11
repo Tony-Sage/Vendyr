@@ -1,3 +1,4 @@
+// AddListsToGroupScreen.tsx
 import React, { useEffect, useState } from 'react';
 import {
     View,
@@ -7,6 +8,7 @@ import {
     TextInput,
     TouchableOpacity,
     ActivityIndicator,
+    Alert,
 } from 'react-native';
 import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { BroadcastList } from '../types';
@@ -18,7 +20,9 @@ interface ScreenProps {
     mode?: string;
     groupId?: string;
     selectedListIds?: string[];
-    onSelect?: (listIds: string[]) => void;
+    groupName?: string;        // Add this
+    groupDescription?: string; // Add this
+    onComplete?: (listIds: string[]) => void;  // Add callback
 }
 
 export const AddListsToGroupScreen: React.FC<ScreenProps> = ({ 
@@ -26,13 +30,16 @@ export const AddListsToGroupScreen: React.FC<ScreenProps> = ({
     goBack, 
     mode, 
     groupId, 
-    selectedListIds: initialSelectedIds, 
-    onSelect 
+    selectedListIds: initialSelectedIds,
+    groupName = '',      // Receive the name
+    groupDescription = '', // Receive the description
+    onComplete,
 }) => {
     const [lists, setLists] = useState<BroadcastList[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initialSelectedIds || []));
+    const [creatingGroup, setCreatingGroup] = useState(false);
 
     useEffect(() => {
         loadUnassignedLists();
@@ -59,26 +66,75 @@ export const AddListsToGroupScreen: React.FC<ScreenProps> = ({
         setSelectedIds(newSelected);
     };
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         const selectedListIds = Array.from(selectedIds);
-        if (mode === 'creation' && onSelect) {
-            onSelect(selectedListIds);
-            goBack();
+        
+        if (mode === 'creation') {
+            // Validate name is provided
+            if (!groupName.trim()) {
+                Alert.alert(
+                    'Missing Information',
+                    'Please go back and enter a group name first',
+                    [
+                        { text: 'OK', onPress: goBack }
+                    ]
+                );
+                return;
+            }
+            await createGroupAndAssignLists(selectedListIds);
         } else if (mode === 'assignment' && groupId) {
-            assignListsToGroup();
+            await assignListsToGroup(selectedListIds);
         } else {
             goBack();
         }
     };
 
-    const assignListsToGroup = async () => {
+    const createGroupAndAssignLists = async (selectedListIds: string[]) => {
+        setCreatingGroup(true);
+        
         try {
-            for (const listId of selectedIds) {
+            // Create the group with the provided name and description
+            const group = await BroadcastGroupService.createGroup(
+                groupName.trim(), 
+                groupDescription.trim() || null
+            );
+            
+            // Assign all selected lists to the new group
+            if (selectedListIds.length > 0) {
+                for (const listId of selectedListIds) {
+                    await BroadcastGroupService.assignListToGroup(listId, group.id);
+                }
+            }
+            
+            // Call the callback with selected lists if provided
+            if (onComplete) {
+                onComplete(selectedListIds);
+            }
+            
+            Alert.alert('Success', `Group "${groupName}" created with ${selectedListIds.length} list(s)`, [
+                { text: 'OK', onPress: () => {
+                    // Navigate back twice to go to the main screen
+                    goBack();
+                    goBack();
+                }}
+            ]);
+        } catch (error) {
+            console.error('Failed to create group:', error);
+            Alert.alert('Error', 'Failed to create group');
+        } finally {
+            setCreatingGroup(false);
+        }
+    };
+
+    const assignListsToGroup = async (selectedListIds: string[]) => {
+        try {
+            for (const listId of selectedListIds) {
                 await BroadcastGroupService.assignListToGroup(listId, groupId!);
             }
             goBack();
         } catch (error) {
             console.error('Failed to assign lists:', error);
+            Alert.alert('Error', 'Failed to assign lists to group');
         }
     };
 
@@ -102,9 +158,27 @@ export const AddListsToGroupScreen: React.FC<ScreenProps> = ({
                 <TouchableOpacity onPress={goBack} style={styles.backButton}>
                     <Text style={styles.backButtonText}>← Back</Text>
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Add Lists</Text>
+                <Text style={styles.headerTitle}>
+                    {mode === 'creation' ? 'Select Lists' : 'Add Lists'}
+                </Text>
                 <View style={styles.placeholder} />
             </View>
+
+            {/* Show group info when in creation mode */}
+            {mode === 'creation' && (
+                <View style={styles.groupInfoCard}>
+                    <Text style={styles.groupInfoLabel}>Creating Group:</Text>
+                    <Text style={styles.groupInfoName}>{groupName || '⚠️ No name provided'}</Text>
+                    {groupDescription ? (
+                        <Text style={styles.groupInfoDescription}>{groupDescription}</Text>
+                    ) : null}
+                    {!groupName.trim() && (
+                        <Text style={styles.warningText}>
+                            ⚠️ Please go back and enter a group name
+                        </Text>
+                    )}
+                </View>
+            )}
 
             <View style={styles.searchContainer}>
                 <TextInput
@@ -148,9 +222,17 @@ export const AddListsToGroupScreen: React.FC<ScreenProps> = ({
             )}
 
             {filteredLists.length > 0 && (
-                <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
+                <TouchableOpacity 
+                    style={[styles.confirmButton, (!groupName.trim() && mode === 'creation') && styles.disabledButton]}
+                    onPress={handleConfirm}
+                    disabled={creatingGroup || (!groupName.trim() && mode === 'creation')}
+                >
                     <Text style={styles.confirmButtonText}>
-                        ✓ Confirm ({selectedIds.size} selected)
+                        {creatingGroup ? 'Creating Group...' : 
+                         mode === 'creation' 
+                            ? `✓ Create Group "${groupName || '?'}" (${selectedIds.size} list${selectedIds.size !== 1 ? 's' : ''})`
+                            : `✓ Confirm (${selectedIds.size} selected)`
+                        }
                     </Text>
                 </TouchableOpacity>
             )}
@@ -194,6 +276,34 @@ const styles = StyleSheet.create({
     },
     placeholder: {
         width: 50,
+    },
+    groupInfoCard: {
+        backgroundColor: '#DCF8C6',
+        margin: 16,
+        marginBottom: 8,
+        padding: 12,
+        borderRadius: 8,
+    },
+    groupInfoLabel: {
+        fontSize: 12,
+        color: '#075E54',
+        marginBottom: 4,
+    },
+    groupInfoName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#202124',
+    },
+    groupInfoDescription: {
+        fontSize: 14,
+        color: '#5f6368',
+        marginTop: 4,
+    },
+    warningText: {
+        fontSize: 12,
+        color: '#F44336',
+        marginTop: 8,
+        fontWeight: '500',
     },
     searchContainer: {
         backgroundColor: '#ffffff',
@@ -246,6 +356,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 4,
         elevation: 5,
+    },
+    disabledButton: {
+        backgroundColor: '#ccc',
     },
     confirmButtonText: {
         color: '#ffffff',

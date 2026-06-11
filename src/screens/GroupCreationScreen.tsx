@@ -1,3 +1,4 @@
+// GroupCreationScreen.tsx
 import React, { useState } from 'react';
 import {
     View,
@@ -45,10 +46,15 @@ export const GroupCreationScreen: React.FC<ScreenProps> = ({ navigate, goBack })
     };
 
     const handleAddLists = () => {
+        // Pass the current name and description to the next screen
         navigate('AddListsToGroup', {
             mode: 'creation',
             selectedListIds: selectedLists,
-            onSelect: (listIds: string[]) => setSelectedLists(listIds),
+            groupName: name,        // Pass the current name
+            groupDescription: description,  // Pass the current description
+            onComplete: (listIds: string[]) => {
+                setSelectedLists(listIds);
+            },
         });
     };
 
@@ -109,6 +115,8 @@ export const GroupCreationScreen: React.FC<ScreenProps> = ({ navigate, goBack })
         </ScrollView>
     );
 };
+
+// ... styles remain the same
 
 const styles = StyleSheet.create({
     container: {
