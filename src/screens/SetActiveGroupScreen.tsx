@@ -18,6 +18,7 @@ interface ScreenProps {
     goBack: () => void;
     selectionMode?: boolean;
     onSelectGroup?: (groupId: string) => void;
+    groupId: string;
 }
 
 export const SetActiveGroupScreen: React.FC<ScreenProps> = ({ 
@@ -56,23 +57,35 @@ export const SetActiveGroupScreen: React.FC<ScreenProps> = ({
             await detectionService.setActiveGroup(groupId);
             setActiveGroupId(groupId);
             
-            Alert.alert(
-                'Active Group Set',
-                `"${groupName}" is now the active group.\n\nVendyr will now check conflicts against lists in this group.`,
-                [
-                    { 
-                        text: 'Open WhatsApp', 
-                        onPress: () => {
-                            Linking.openURL('whatsapp://').catch(() => {
-                                Alert.alert('Error', 'WhatsApp is not installed');
-                            });
-                        }
-                    },
-                    { text: 'OK' },
-                ]
-            );
+            // Open WhatsApp automatically
+            const whatsappUrl = 'whatsapp://';
+            const whatsappBusinessUrl = 'whatsapp://send';
+            
+            try {
+                const canOpen = await Linking.canOpenURL(whatsappUrl);
+                if (canOpen) {
+                    await Linking.openURL(whatsappUrl);
+                } else {
+                    const canOpenBusiness = await Linking.canOpenURL(whatsappBusinessUrl);
+                    if (canOpenBusiness) {
+                        await Linking.openURL(whatsappBusinessUrl);
+                    } else {
+                        Alert.alert(
+                            'WhatsApp Not Found',
+                            'Please make sure WhatsApp is installed on your device.',
+                            [
+                                { text: 'OK' },
+                                { text: 'Open Play Store', onPress: () => Linking.openURL('market://details?id=com.whatsapp') }
+                            ]
+                        );
+                    }
+                }
+            } catch (error) {
+                Alert.alert('Error', 'Could not open WhatsApp. Please make sure it is installed.');
+            }
         }
     };
+    
 
     const handleClearActive = async () => {
         await detectionService.setActiveGroup(null);
@@ -106,6 +119,7 @@ export const SetActiveGroupScreen: React.FC<ScreenProps> = ({
         );
     }
 
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -134,7 +148,9 @@ export const SetActiveGroupScreen: React.FC<ScreenProps> = ({
                     return (
                         <TouchableOpacity
                             style={[styles.groupCard, isActive && styles.activeCard]}
-                            onPress={() => handleSelectGroup(item.id, item.name)}
+                            onPress={() => {
+                                handleSelectGroup(item.id, item.name)
+                            }}
                             activeOpacity={0.7}
                         >
                             <View style={styles.groupIcon}>
