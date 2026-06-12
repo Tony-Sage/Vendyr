@@ -1,61 +1,72 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, Alert, Vibration, BackHandler, Linking } from 'react-native';
-import 'react-native-get-random-values';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  Alert,
+  Vibration,
+  BackHandler,
+  Linking,
+} from "react-native";
 
 // Import all screens
-import { HomeScreen } from './src/screens/HomeScreen';
-import { GroupCreationScreen } from './src/screens/GroupCreationScreen';
-import { AddListsToGroupScreen } from './src/screens/AddListsToGroupScreen';
-import { UnassignedListsScreen } from './src/screens/UnassignedListsScreen';
-import { GroupDetailScreen } from './src/screens/GroupDetailScreen';
-import { ListContactsScreen } from './src/screens/ListContactsScreen';
-import { GroupInfoScreen } from './src/screens/GroupInfoScreen';
-import { NotificationsScreen } from './src/screens/NotificationsScreen';
-import { SettingsScreen } from './src/screens/SettingsScreen';
-import { SetActiveGroupScreen } from './src/screens/SetActiveGroupScreen';
+import { HomeScreen } from "./src/screens/HomeScreen";
+import { GroupCreationScreen } from "./src/screens/GroupCreationScreen";
+import { AddListsToGroupScreen } from "./src/screens/AddListsToGroupScreen";
+import { UnassignedListsScreen } from "./src/screens/UnassignedListsScreen";
+import { GroupDetailScreen } from "./src/screens/GroupDetailScreen";
+import { ListContactsScreen } from "./src/screens/ListContactsScreen";
+import { GroupInfoScreen } from "./src/screens/GroupInfoScreen";
+import { NotificationsScreen } from "./src/screens/NotificationsScreen";
+import { SettingsScreen } from "./src/screens/SettingsScreen";
+import { SetActiveGroupScreen } from "./src/screens/SetActiveGroupScreen";
 
 // Services
-import { initDatabase } from './src/database/database';
-import { detectionService } from './src/services/DetectionService';
-import { mockAccessibilityService } from './src/services/MockAccessibilityService';
-import { FloatingIndicator } from './src/components/FloatingIndicator';
-import { BroadcastGroupService } from './src/services/BroadcastGroupService';
-import { mockBroadcastLists, mockListContacts } from './src/mocks/mockData';
-import * as Database from './src/database/database';
+import { initDatabase } from "./src/database/database";
+import { detectionService } from "./src/services/DetectionService";
+import { mockAccessibilityService } from "./src/services/MockAccessibilityService";
+import { FloatingIndicator } from "./src/components/FloatingIndicator";
+import { BroadcastGroupService } from "./src/services/BroadcastGroupService";
+import { mockBroadcastLists, mockListContacts } from "./src/mocks/mockData";
+import * as Database from "./src/database/database";
 
-type ScreenName = 
-  | 'Home'
-  | 'GroupCreation'
-  | 'AddListsToGroup'
-  | 'UnassignedLists'
-  | 'GroupDetail'
-  | 'ListContacts'
-  | 'GroupInfo'
-  | 'Notifications'
-  | 'Settings'
-  | 'SetActiveGroup';
+type ScreenName =
+  | "Home"
+  | "GroupCreation"
+  | "AddListsToGroup"
+  | "UnassignedLists"
+  | "GroupDetail"
+  | "ListContacts"
+  | "GroupInfo"
+  | "Notifications"
+  | "Settings"
+  | "SetActiveGroup";
 
-  interface NavigationParams {
-    groupId?: string;
-    listId?: string;
-    listName?: string;
-    mode?: string;
-    selectedListIds?: string[];
-    groupName?: string;           // ADD THIS
-    groupDescription?: string;    // ADD THIS
-    onSelect?: (listIds: string[]) => void;
-    onComplete?: (listIds: string[]) => void;  // ADD THIS
-    selectionMode?: boolean;
-    onSelectGroup?: (groupId: string) => void;
-    returnToScreen?: ScreenName;
-    returnParams?: any;
-  }
+interface NavigationParams {
+  groupId?: string;
+  listId?: string;
+  listName?: string;
+  mode?: string;
+  selectedListIds?: string[];
+  groupName?: string; // ADD THIS
+  groupDescription?: string; // ADD THIS
+  onSelect?: (listIds: string[]) => void;
+  onComplete?: (listIds: string[]) => void; // ADD THIS
+  selectionMode?: boolean;
+  onSelectGroup?: (groupId: string) => void;
+  returnToScreen?: ScreenName;
+  returnParams?: any;
+}
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<ScreenName>('Home');
-  const [navigationParams, setNavigationParams] = useState<NavigationParams>({});
-  const [navigationHistory, setNavigationHistory] = useState<{screen: ScreenName, params: NavigationParams}[]>([]);
+  const [currentScreen, setCurrentScreen] = useState<ScreenName>("Home");
+  const [navigationParams, setNavigationParams] = useState<NavigationParams>(
+    {},
+  );
+  const [navigationHistory, setNavigationHistory] = useState<
+    { screen: ScreenName; params: NavigationParams }[]
+  >([]);
   const [hasConflict, setHasConflict] = useState(false);
   const [conflictCount, setConflictCount] = useState(0);
   const [showFloatingIndicator, setShowFloatingIndicator] = useState(true);
@@ -63,7 +74,10 @@ export default function App() {
 
   const navigate = (screen: ScreenName, params?: NavigationParams) => {
     // Save current screen to history before navigating
-    setNavigationHistory(prev => [...prev, { screen: currentScreen, params: navigationParams }]);
+    setNavigationHistory((prev) => [
+      ...prev,
+      { screen: currentScreen, params: navigationParams },
+    ]);
     setNavigationParams(params || {});
     setCurrentScreen(screen);
   };
@@ -71,11 +85,11 @@ export default function App() {
   const goBack = () => {
     if (navigationHistory.length > 0) {
       const previous = navigationHistory[navigationHistory.length - 1];
-      setNavigationHistory(prev => prev.slice(0, -1));
+      setNavigationHistory((prev) => prev.slice(0, -1));
       setCurrentScreen(previous.screen);
       setNavigationParams(previous.params);
     } else {
-      setCurrentScreen('Home');
+      setCurrentScreen("Home");
       setNavigationParams({});
     }
   };
@@ -83,19 +97,22 @@ export default function App() {
   // Direct back to home (for cancel operations)
   const goToHome = () => {
     setNavigationHistory([]);
-    setCurrentScreen('Home');
+    setCurrentScreen("Home");
     setNavigationParams({});
   };
 
   // Handle Android back button
   useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (currentScreen !== 'Home') {
-        goBack();
-        return true;
-      }
-      return false;
-    });
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        if (currentScreen !== "Home") {
+          goBack();
+          return true;
+        }
+        return false;
+      },
+    );
     return () => backHandler.remove();
   }, [currentScreen, navigationHistory]);
 
@@ -106,47 +123,47 @@ export default function App() {
   const initializeApp = async () => {
     try {
       await initDatabase();
-      
+
       const groups = await BroadcastGroupService.getAllGroups();
       if (groups.length === 0) {
-        console.log('No data found, loading mock data...');
+        console.log("No data found, loading mock data...");
         await loadMockData();
       }
-      
+
       await detectionService.initialize();
-      
+
       const settings = await Database.getAppSettings();
       setShowFloatingIndicator(settings.floatingBubbleEnabled);
-      
+
       mockAccessibilityService.startMonitoring((conflicts) => {
         if (conflicts.length > 0) {
           setHasConflict(true);
           setConflictCount(conflicts.length);
           setLastConflicts(conflicts);
-          
+
           if (settings.vibrationEnabled) {
             Vibration.vibrate(500);
           }
-          
-          const conflictNames = conflicts.map(c => c.contactName).join(', ');
+
+          const conflictNames = conflicts.map((c) => c.contactName).join(", ");
           Alert.alert(
-            'Conflict Detected!',
+            "Conflict Detected!",
             `${conflictNames} already in "${conflicts[0].existingListName}"`,
             [
-              { text: 'OK', onPress: () => setHasConflict(false) },
-              { text: 'View Details', onPress: () => showConflictDetails() },
-            ]
+              { text: "OK", onPress: () => setHasConflict(false) },
+              { text: "View Details", onPress: () => showConflictDetails() },
+            ],
           );
         } else {
           setHasConflict(false);
           setConflictCount(0);
         }
       });
-      
+
       setIsReady(true);
     } catch (error) {
-      console.error('Failed to initialize app:', error);
-      Alert.alert('Error', 'Failed to initialize app. Please restart.');
+      console.error("Failed to initialize app:", error);
+      Alert.alert("Error", "Failed to initialize app. Please restart.");
     }
   };
 
@@ -158,16 +175,19 @@ export default function App() {
         await Database.addContactsToList(list.id, contacts);
       }
     }
-    console.log('Mock data loaded');
+    console.log("Mock data loaded");
   };
 
   const showConflictDetails = () => {
     Alert.alert(
-      'Conflict Details',
-      lastConflicts.map(c => 
-        `${c.contactName} (${c.phoneNumber})\nAlready in: ${c.existingListName}`
-      ).join('\n\n'),
-      [{ text: 'OK' }]
+      "Conflict Details",
+      lastConflicts
+        .map(
+          (c) =>
+            `${c.contactName} (${c.phoneNumber})\nAlready in: ${c.existingListName}`,
+        )
+        .join("\n\n"),
+      [{ text: "OK" }],
     );
   };
 
@@ -175,15 +195,24 @@ export default function App() {
     if (hasConflict) {
       showConflictDetails();
     } else {
-      Alert.alert('Vendyr', 'No conflicts detected. Safe to proceed.');
+      Alert.alert("Vendyr", "No conflicts detected. Safe to proceed.");
     }
   };
 
   if (!isReady) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#075E54' }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#075E54",
+        }}
+      >
         <ActivityIndicator size="large" color="#25D366" />
-        <Text style={{ marginTop: 16, color: '#ffffff' }}>Initializing Vendyr...</Text>
+        <Text style={{ marginTop: 16, color: "#ffffff" }}>
+          Initializing Vendyr...
+        </Text>
       </View>
     );
   }
@@ -192,60 +221,60 @@ export default function App() {
     const commonProps = { navigate, goBack, goToHome };
 
     switch (currentScreen) {
-      case 'Home':
+      case "Home":
         return <HomeScreen {...commonProps} />;
-      
-      case 'GroupCreation':
+
+      case "GroupCreation":
         return <GroupCreationScreen {...commonProps} />;
-      
-        case 'AddListsToGroup':
-          return (
-            <AddListsToGroupScreen
-              {...commonProps}
-              mode={navigationParams.mode}
-              groupId={navigationParams.groupId}
-              selectedListIds={navigationParams.selectedListIds}
-              groupName={navigationParams.groupName}
-              groupDescription={navigationParams.groupDescription}
-              onComplete={navigationParams.onComplete}
-            />
-          );
-      
-      case 'UnassignedLists':
+
+      case "AddListsToGroup":
+        return (
+          <AddListsToGroupScreen
+            {...commonProps}
+            mode={navigationParams.mode}
+            groupId={navigationParams.groupId}
+            selectedListIds={navigationParams.selectedListIds}
+            groupName={navigationParams.groupName}
+            groupDescription={navigationParams.groupDescription}
+            onComplete={navigationParams.onComplete}
+          />
+        );
+
+      case "UnassignedLists":
         return <UnassignedListsScreen {...commonProps} />;
-      
-      case 'GroupDetail':
+
+      case "GroupDetail":
         return (
           <GroupDetailScreen
             {...commonProps}
-            groupId={navigationParams.groupId || ''}
+            groupId={navigationParams.groupId || ""}
           />
         );
-      
-      case 'ListContacts':
+
+      case "ListContacts":
         return (
           <ListContactsScreen
             {...commonProps}
-            listId={navigationParams.listId || ''}
+            listId={navigationParams.listId || ""}
             listName={navigationParams.listName}
           />
         );
-      
-      case 'GroupInfo':
+
+      case "GroupInfo":
         return (
           <GroupInfoScreen
             {...commonProps}
-            groupId={navigationParams.groupId || ''}
+            groupId={navigationParams.groupId || ""}
           />
         );
-      
-      case 'Notifications':
+
+      case "Notifications":
         return <NotificationsScreen {...commonProps} />;
-      
-      case 'Settings':
+
+      case "Settings":
         return <SettingsScreen {...commonProps} />;
-      
-      case 'SetActiveGroup':
+
+      case "SetActiveGroup":
         return (
           <SetActiveGroupScreen
             {...commonProps}
@@ -253,7 +282,7 @@ export default function App() {
             onSelectGroup={navigationParams.onSelectGroup}
           />
         );
-      
+
       default:
         return <HomeScreen {...commonProps} />;
     }

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as Database from '../database/database';
 import { storage } from '../utils/storage';
-import { BroadcastGroupService } from '../services/BroadcastGroupService';
+//import { BroadcastGroupService } from '../services/BroadcastGroupService';
 import { mockAccessibilityService } from '../services/MockAccessibilityService';
 
 interface ScreenProps {
@@ -84,12 +84,16 @@ export const SettingsScreen: React.FC<ScreenProps> = ({ navigate, goBack }) => {
         );
     };
 
-    const handleLinkWhatsApp = () => {
+    /*const handleLinkWhatsApp = () => {
         Alert.alert(
             'Link WhatsApp',
             'To sync your broadcast lists, you need to link Vendyr to WhatsApp.\n\nThis feature will be available in the next update.',
             [{ text: 'OK' }]
         );
+    };*/
+
+    const handleLinkWhatsApp = () => {
+        navigate('LinkWhatsApp');
     };
 
     const handleSyncNow = async () => {
