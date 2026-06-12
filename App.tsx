@@ -35,18 +35,21 @@ type ScreenName =
   | 'Settings'
   | 'SetActiveGroup';
 
-interface NavigationParams {
-  groupId?: string;
-  listId?: string;
-  listName?: string;
-  mode?: string;
-  selectedListIds?: string[];
-  onSelect?: (listIds: string[]) => void;
-  selectionMode?: boolean;
-  onSelectGroup?: (groupId: string) => void;
-  returnToScreen?: ScreenName;
-  returnParams?: any;
-}
+  interface NavigationParams {
+    groupId?: string;
+    listId?: string;
+    listName?: string;
+    mode?: string;
+    selectedListIds?: string[];
+    groupName?: string;           // ADD THIS
+    groupDescription?: string;    // ADD THIS
+    onSelect?: (listIds: string[]) => void;
+    onComplete?: (listIds: string[]) => void;  // ADD THIS
+    selectionMode?: boolean;
+    onSelectGroup?: (groupId: string) => void;
+    returnToScreen?: ScreenName;
+    returnParams?: any;
+  }
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -195,16 +198,18 @@ export default function App() {
       case 'GroupCreation':
         return <GroupCreationScreen {...commonProps} />;
       
-      case 'AddListsToGroup':
-        return (
-          <AddListsToGroupScreen
-            {...commonProps}
-            mode={navigationParams.mode}
-            groupId={navigationParams.groupId}
-            selectedListIds={navigationParams.selectedListIds}
-            onSelect={navigationParams.onSelect}
-          />
-        );
+        case 'AddListsToGroup':
+          return (
+            <AddListsToGroupScreen
+              {...commonProps}
+              mode={navigationParams.mode}
+              groupId={navigationParams.groupId}
+              selectedListIds={navigationParams.selectedListIds}
+              groupName={navigationParams.groupName}
+              groupDescription={navigationParams.groupDescription}
+              onComplete={navigationParams.onComplete}
+            />
+          );
       
       case 'UnassignedLists':
         return <UnassignedListsScreen {...commonProps} />;
@@ -263,6 +268,7 @@ export default function App() {
           conflictCount={conflictCount}
           onPress={handleFloatingPress}
           visible={true}
+          draggabele={true}
         />
       )}
     </>
