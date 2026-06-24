@@ -16,13 +16,23 @@
       "supportsTablet": true
     },
     "android": {
+      "buildProperties": {
+        "minSdkVersion": 26,
+        "targetSdkVersion": 34,
+        "compileSdkVersion": 36,
+        "buildToolsVersion": "34.0.0"
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.Vendyr"
+      "package": "com.anonymous.Vendyr",
+      "permissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.FOREGROUND_SERVICE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,10 +44,18 @@
         {
           "android": {
             "minSdkVersion": 26,
-            "targetSdkVersion": 34
+            "targetSdkVersion": 34,
+            "compileSdkVersion": 36,
+            "buildToolsVersion": "34.0.0"
           }
         }
-      ]
-    ]
+      ],
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "49a4b99f-1717-4181-b499-efbfac31a04c"
+      }
+    }
   }
 }

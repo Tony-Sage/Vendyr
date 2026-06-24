@@ -24,7 +24,7 @@ import { SetActiveGroupScreen } from "./src/screens/SetActiveGroupScreen";
 // Services
 import { initDatabase } from "./src/database/database";
 import { detectionService } from "./src/services/DetectionService";
-import { mockAccessibilityService } from "./src/services/MockAccessibilityService";
+import { realAccessibilityService as accessibilityService } from "./src/services/RealAccessibilityService";
 import { FloatingIndicator } from "./src/components/FloatingIndicator";
 import { BroadcastGroupService } from "./src/services/BroadcastGroupService";
 import { mockBroadcastLists, mockListContacts } from "./src/mocks/mockData";
@@ -48,10 +48,10 @@ interface NavigationParams {
   listName?: string;
   mode?: string;
   selectedListIds?: string[];
-  groupName?: string; // ADD THIS
-  groupDescription?: string; // ADD THIS
+  groupName?: string;
+  groupDescription?: string;
   onSelect?: (listIds: string[]) => void;
-  onComplete?: (listIds: string[]) => void; // ADD THIS
+  onComplete?: (listIds: string[]) => void;
   selectionMode?: boolean;
   onSelectGroup?: (groupId: string) => void;
   returnToScreen?: ScreenName;
@@ -73,7 +73,6 @@ export default function App() {
   const [lastConflicts, setLastConflicts] = useState<any[]>([]);
 
   const navigate = (screen: ScreenName, params?: NavigationParams) => {
-    // Save current screen to history before navigating
     setNavigationHistory((prev) => [
       ...prev,
       { screen: currentScreen, params: navigationParams },
@@ -94,14 +93,12 @@ export default function App() {
     }
   };
 
-  // Direct back to home (for cancel operations)
   const goToHome = () => {
     setNavigationHistory([]);
     setCurrentScreen("Home");
     setNavigationParams({});
   };
 
-  // Handle Android back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
@@ -135,7 +132,8 @@ export default function App() {
       const settings = await Database.getAppSettings();
       setShowFloatingIndicator(settings.floatingBubbleEnabled);
 
-      mockAccessibilityService.startMonitoring((conflicts) => {
+      // Use the real accessibility service
+      accessibilityService.startMonitoring((conflicts) => {
         if (conflicts.length > 0) {
           setHasConflict(true);
           setConflictCount(conflicts.length);
@@ -297,7 +295,7 @@ export default function App() {
           conflictCount={conflictCount}
           onPress={handleFloatingPress}
           visible={true}
-          draggabele={true}
+          draggable={true}
         />
       )}
     </>
