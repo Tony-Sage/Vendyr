@@ -48,7 +48,13 @@ export const SettingsScreen: React.FC<ScreenProps> = ({ navigate, goBack }) => {
       const lastSync = await storage.getLastSyncTime();
       setLastSyncTime(lastSync);
 
-      setAccessibilityEnabled(await realAccessibilityService.isAccessibilityEnabled());
+      try {
+        const enabled = await realAccessibilityService.isAccessibilityEnabled();
+        setAccessibilityEnabled(enabled);
+      } catch (error) {
+        console.error('Failed to check accessibility:', error);
+        setAccessibilityEnabled(false);
+      }
         
       setOverlayEnabled(false);
     } catch (error) {
